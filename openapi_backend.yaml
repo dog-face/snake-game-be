@@ -1,0 +1,668 @@
+openapi: 3.1.0
+info:
+  title: Snake Game API
+  description: "\n    RESTful API for the Snake Game application. Provides endpoints\
+    \ for user authentication, \n    leaderboard management, and real-time game state\
+    \ tracking for the watch feature.\n    \n    ## Authentication\n    Most endpoints\
+    \ require JWT authentication. Include the token in the Authorization header:\n\
+    \    ```\n    Authorization: Bearer <your-jwt-token>\n    ```\n    "
+  contact:
+    name: API Support
+    email: support@snakegame.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 1.0.0
+servers:
+- url: http://localhost:8000/api/v1
+  description: Local development server
+- url: https://api.snakegame.com/api/v1
+  description: Production server
+paths:
+  /api/v1/auth/signup:
+    post:
+      tags:
+      - auth
+      summary: Create User
+      description: Create new user.
+      operationId: create_user_api_v1_auth_signup_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Response Create User Api V1 Auth Signup Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/login:
+    post:
+      tags:
+      - auth
+      summary: Login
+      description: Authenticate user and return JWT token.
+      operationId: login_api_v1_auth_login_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginSchema'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Response Login Api V1 Auth Login Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/logout:
+    post:
+      tags:
+      - auth
+      summary: Logout
+      description: Logout user (optional - mainly for token blacklisting if implemented).
+      operationId: logout_api_v1_auth_logout_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                title: Response Logout Api V1 Auth Logout Post
+      security:
+      - OAuth2PasswordBearer: []
+  /api/v1/auth/me:
+    get:
+      tags:
+      - auth
+      summary: Read Users Me
+      description: Get current user.
+      operationId: read_users_me_api_v1_auth_me_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+      security:
+      - OAuth2PasswordBearer: []
+  /api/v1/leaderboard:
+    get:
+      tags:
+      - leaderboard
+      summary: Get Leaderboard
+      description: Get leaderboard entries, sorted by score (descending).
+      operationId: get_leaderboard_api_v1_leaderboard_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 10
+          title: Limit
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Offset
+      - name: gameMode
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Gamemode
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - leaderboard
+      summary: Submit Score
+      description: Submit a new score entry.
+      operationId: submit_score_api_v1_leaderboard_post
+      security:
+      - OAuth2PasswordBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaderboardCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardEntry'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/watch/active:
+    get:
+      tags:
+      - watch
+      summary: Get Active Players
+      description: Get list of currently active players (players with active game
+        sessions).
+      operationId: get_active_players_api_v1_watch_active_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivePlayersResponse'
+  /api/v1/watch/active/{playerId}:
+    get:
+      tags:
+      - watch
+      summary: Get Active Player
+      description: Get specific active player's game state.
+      operationId: get_active_player_api_v1_watch_active__playerId__get
+      parameters:
+      - name: playerId
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Playerid
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivePlayer'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/watch/start:
+    post:
+      tags:
+      - watch
+      summary: Start Game Session
+      description: Start a new game session (for tracking active players).
+      operationId: start_game_session_api_v1_watch_start_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WatchStartRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchStartResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
+  /api/v1/watch/update/{sessionId}:
+    put:
+      tags:
+      - watch
+      summary: Update Game Session
+      description: Update game state for an active session.
+      operationId: update_game_session_api_v1_watch_update__sessionId__put
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Sessionid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WatchUpdateRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchUpdateResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/watch/end/{sessionId}:
+    post:
+      tags:
+      - watch
+      summary: End Game Session
+      description: End a game session (called when game ends).
+      operationId: end_game_session_api_v1_watch_end__sessionId__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Sessionid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WatchEndRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchEndResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /:
+    get:
+      summary: Root
+      operationId: root__get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /health:
+    get:
+      summary: Health
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+components:
+  schemas:
+    ActivePlayer:
+      properties:
+        id:
+          type: string
+          title: Id
+        userId:
+          type: string
+          title: Userid
+        username:
+          type: string
+          title: Username
+        score:
+          type: integer
+          title: Score
+        gameMode:
+          $ref: '#/components/schemas/GameMode'
+        gameState:
+          $ref: '#/components/schemas/GameState'
+        startedAt:
+          type: string
+          format: date-time
+          title: Startedat
+        lastUpdatedAt:
+          type: string
+          format: date-time
+          title: Lastupdatedat
+      type: object
+      required:
+      - id
+      - userId
+      - username
+      - score
+      - gameMode
+      - gameState
+      - startedAt
+      - lastUpdatedAt
+      title: ActivePlayer
+    ActivePlayersResponse:
+      properties:
+        players:
+          items:
+            $ref: '#/components/schemas/ActivePlayer'
+          type: array
+          title: Players
+      type: object
+      required:
+      - players
+      title: ActivePlayersResponse
+    GameMode:
+      type: string
+      enum:
+      - pass-through
+      - walls
+      title: GameMode
+    GameState:
+      properties:
+        snake:
+          items:
+            $ref: '#/components/schemas/Position'
+          type: array
+          title: Snake
+        food:
+          $ref: '#/components/schemas/Position'
+        direction:
+          type: string
+          enum:
+          - up
+          - down
+          - left
+          - right
+          title: Direction
+        score:
+          type: integer
+          title: Score
+        gameOver:
+          type: boolean
+          title: Gameover
+      type: object
+      required:
+      - snake
+      - food
+      - direction
+      - score
+      - gameOver
+      title: GameState
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    LeaderboardCreate:
+      properties:
+        score:
+          type: integer
+          title: Score
+        game_mode:
+          $ref: '#/components/schemas/GameMode'
+      type: object
+      required:
+      - score
+      - game_mode
+      title: LeaderboardCreate
+    LeaderboardEntry:
+      properties:
+        score:
+          type: integer
+          title: Score
+        game_mode:
+          $ref: '#/components/schemas/GameMode'
+        id:
+          type: string
+          title: Id
+        username:
+          type: string
+          title: Username
+        date:
+          type: string
+          format: date
+          title: Date
+      type: object
+      required:
+      - score
+      - game_mode
+      - id
+      - username
+      - date
+      title: LeaderboardEntry
+    LeaderboardResponse:
+      properties:
+        entries:
+          items:
+            $ref: '#/components/schemas/LeaderboardEntry'
+          type: array
+          title: Entries
+        total:
+          type: integer
+          title: Total
+        limit:
+          type: integer
+          title: Limit
+        offset:
+          type: integer
+          title: Offset
+      type: object
+      required:
+      - entries
+      - total
+      - limit
+      - offset
+      title: LeaderboardResponse
+    LoginSchema:
+      properties:
+        username:
+          type: string
+          title: Username
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - username
+      - password
+      title: LoginSchema
+    Position:
+      properties:
+        x:
+          type: integer
+          title: X
+        y:
+          type: integer
+          title: Y
+      type: object
+      required:
+      - x
+      - y
+      title: Position
+    User:
+      properties:
+        username:
+          type: string
+          title: Username
+        email:
+          type: string
+          format: email
+          title: Email
+        id:
+          type: string
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - username
+      - email
+      - id
+      - created_at
+      - updated_at
+      title: User
+    UserCreate:
+      properties:
+        username:
+          type: string
+          title: Username
+        email:
+          type: string
+          format: email
+          title: Email
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - username
+      - email
+      - password
+      title: UserCreate
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    WatchEndRequest:
+      properties:
+        finalScore:
+          type: integer
+          title: Finalscore
+        gameMode:
+          $ref: '#/components/schemas/GameMode'
+      type: object
+      required:
+      - finalScore
+      - gameMode
+      title: WatchEndRequest
+    WatchEndResponse:
+      properties:
+        message:
+          type: string
+          title: Message
+        leaderboardEntry:
+          type: object
+          title: Leaderboardentry
+      type: object
+      required:
+      - message
+      - leaderboardEntry
+      title: WatchEndResponse
+    WatchStartRequest:
+      properties:
+        gameMode:
+          $ref: '#/components/schemas/GameMode'
+      type: object
+      required:
+      - gameMode
+      title: WatchStartRequest
+    WatchStartResponse:
+      properties:
+        sessionId:
+          type: string
+          title: Sessionid
+        gameMode:
+          $ref: '#/components/schemas/GameMode'
+        startedAt:
+          type: string
+          format: date-time
+          title: Startedat
+      type: object
+      required:
+      - sessionId
+      - gameMode
+      - startedAt
+      title: WatchStartResponse
+    WatchUpdateRequest:
+      properties:
+        gameState:
+          $ref: '#/components/schemas/GameState'
+      type: object
+      required:
+      - gameState
+      title: WatchUpdateRequest
+    WatchUpdateResponse:
+      properties:
+        message:
+          type: string
+          title: Message
+        lastUpdatedAt:
+          type: string
+          format: date-time
+          title: Lastupdatedat
+      type: object
+      required:
+      - message
+      - lastUpdatedAt
+      title: WatchUpdateResponse
+  securitySchemes:
+    OAuth2PasswordBearer:
+      type: oauth2
+      flows:
+        password:
+          scopes: {}
+          tokenUrl: /api/v1/auth/login
